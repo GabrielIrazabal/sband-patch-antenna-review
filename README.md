@@ -217,7 +217,15 @@ The gain column is realized gain, so it already includes the polarization and mi
 
 ### Temperature
 
-The Dk of the PTFE changes by −115 ppm/°C (datasheet). Over −40 to +85 °C that moves the antenna by about ±9 MHz around its room-temperature frequency. This is a hand estimate, not simulated. It affects every board the same way, so choosing a size cannot remove it.
+The Dk of the PTFE changes by −115 ppm/°C (datasheet), and the copper grows by about 15.5 ppm/°C, which partly cancels it. In HFSS the 1.5 mm cut corner moves −5 MHz at −40 °C and +6 MHz at +85 °C, and still meets the requirements at both:
+
+| 1.5 mm cut corner | Best match moves | Lowest gain | Worst return loss | Worst axial ratio |
+| --- | --- | --- | --- | --- |
+| −40 °C | −5.0 MHz | 6.87 dBic | 15.1 dB | 6.1 dB |
+| 20 °C (nominal) | 0 | 7.08 dBic | 15.5 dB | 4.1 dB |
+| +85 °C | +6.0 MHz | 6.73 dBic | 13.3 dB | 5.9 dB |
+
+This drift comes on top of the manufacturing error, and it affects every board the same way, so choosing a size cannot remove it. It is about ±6 MHz, so a board that lands within about ±10 MHz at room temperature still has some margin. The 1.5 mm dual feed fails this same check (section 6).
 
 ### Options considered
 
@@ -294,6 +302,32 @@ It is right-hand circular when J2 lags J1 by 90°.
 
 "Typical coupler" means one that is off by 0.5 dB and 3° and loses 0.4 dB. The coupler itself was not modelled.
 
+### Temperature and manufacturing checks: the 1.5 mm dual feed does not hold
+
+Both dual feeds were rerun in HFSS (24 and 25 November) with the effects that real boards add. For temperature, the Dk was scaled by the datasheet's −115 ppm/°C and the copper dimensions by 15.5 ppm/°C, from 20 °C. The whole board was held at one temperature.
+
+| Dual feed, 1.5 mm | Best match moves | Lowest gain (after coupler) | Worst return loss | Requirements |
+| --- | --- | --- | --- | --- |
+| Nominal | 0 | 6.75 dBic | 13.6 dB | pass |
+| Finest mesh | +1.0 MHz | 6.70 dBic | 12.8 dB | pass |
+| With the SMA connector | −4.0 MHz | 6.58 dBic | 11.0 dB | pass |
+| With solder mask on the top | −8.5 MHz | 6.38 dBic | 9.1 dB | **fail** |
+| −40 °C | −6.5 MHz | 6.50 dBic | 9.9 dB | **fail** |
+| +85 °C | +6.5 MHz | 6.43 dBic | 9.8 dB | **fail** |
+
+**Its match window is only 32 MHz wide, and a ±6 MHz temperature drift is enough to take the channel edge below 10 dB return loss.** It fails the match requirement at both temperature extremes and the gain requirement at +85 °C. The manufacturing tolerances in section 5 (about ±20 MHz) are three times larger than that drift, so this design has no margin left for them. The second solver (openEMS) already put it at 6.49 dBic at nominal.
+
+| Dual feed, 3 mm | Best match moves | Lowest gain (after coupler) | Worst return loss | Requirements |
+| --- | --- | --- | --- | --- |
+| Nominal | 0 | 7.26 dBic | 16.4 dB | pass |
+| −40 °C / +85 °C | −5.5 / +6.0 MHz | 7.18 / 7.21 dBic | 13.9 / 15.8 dB | pass |
+| SMA and glue-joint layer, as drawn | −15.0 MHz | 6.99 dBic | 10.8 dB | pass, narrowly |
+| The same plus solder mask on the top | −24.0 MHz | 6.83 dBic | 9.0 dB | **fail** |
+
+The 3 mm dual feed survives temperature, but the SMA, the glue joint and any top mask all pull it lower in frequency, and the shifts add up. As drawn it keeps only 0.8 dB of return loss in hand, before manufacturing tolerance is counted.
+
+For comparison, both cut corners pass all of these checks on gain and return loss (section 5 has the 1.5 mm temperature figures).
+
 ### Compared with the cut corner
 
 | | Cut corner | Dual feed |
@@ -302,6 +336,7 @@ It is right-hand circular when J2 lags J1 by 90°.
 | Extra parts | none | a 90° coupler, a load, a second cable and a second connector |
 | Gain | higher | about 0.3 to 0.4 dB lower, because of the coupler |
 | Match bandwidth | wider | half as wide |
+| −40 °C and +85 °C (HFSS) | holds at 1.5 mm and 3 mm | fails at 1.5 mm, holds at 3 mm |
 
 ### Files
 
@@ -338,7 +373,8 @@ Suggested checks:
 ## 8. What has not been verified
 
 - **Nothing has been built or measured.** A network analyzer measurement of the first boards is the real test.
-- **Power handling (3 W) and temperature (−40 to +85 °C)** have not been simulated or tested. Section 5 has a hand estimate of the temperature shift.
+- **Power handling (3 W)** has not been simulated or tested.
+- **Temperature (−40 to +85 °C)** has only been simulated as a steady state, with the whole board at one temperature and the datasheet's Dk drift (sections 5 and 6). It has not been tested.
 - **The real mounting.** Every result assumes a clean 100 mm metal face behind the board, with nothing else near the patch.
 - **The SMA connector** is not in these models. In a separate run it moved the 1.5 mm cut corner about 3 MHz lower.
 - **The coupler** for the dual feed is assumed, not modelled.
