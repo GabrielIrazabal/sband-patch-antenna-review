@@ -106,8 +106,6 @@ Other figures: directivity 7.97 dBi, radiation efficiency 87 %.
 
 ## 4. Cut corner, 3 mm (stacked)
 
-The same idea on a board twice as thick. JLCPCB only sells this PTFE at 1.524 mm, so the 3 mm antenna is two boards glued together: a TOP board carrying only the patch, and a BOTTOM board carrying only the ground and the connector. A thicker patch has about twice the bandwidth and more gain.
-
 Folder: [`2_cut_corner_3mm_stacked`](2_cut_corner_3mm_stacked)
 
 ![Stackup](2_cut_corner_3mm_stacked/plots/stackup.png)
