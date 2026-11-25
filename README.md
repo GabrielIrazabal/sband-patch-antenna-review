@@ -12,7 +12,7 @@ Author: Gabriel Irazabal
 2. [How everything was simulated](#2-how-everything-was-simulated)
 3. [Cut corner, 1.5 mm](#3-cut-corner-15-mm)
 4. [Cut corner, 3 mm (stacked)](#4-cut-corner-3-mm-stacked)
-5. [The three sizes for the first order](#5-the-three-sizes-for-the-first-order)
+5. [Manufacturing tolerance and the proposed first order](#5-manufacturing-tolerance-and-the-proposed-first-order)
 6. [Supplementary: dual feed](#6-supplementary-dual-feed)
 7. [How to check this work](#7-how-to-check-this-work)
 8. [What has not been verified](#8-what-has-not-been-verified)
@@ -180,25 +180,57 @@ Other figures: directivity 7.96 dBi, radiation efficiency 95 %. The axial ratio 
 | Gerbers for JLCPCB | [`2_cut_corner_3mm_stacked/gerbers`](2_cut_corner_3mm_stacked/gerbers) |
 | Ansys project and raw results | [`2_cut_corner_3mm_stacked/ansys`](2_cut_corner_3mm_stacked/ansys) |
 
-## 5. The three sizes for the first order
+## 5. Manufacturing tolerance and the proposed first order
 
-The plan for the first order is the 1.5 mm cut corner in three sizes: the design size, 0.3 mm smaller and 0.3 mm larger.
+**Proposal: order the 1.5 mm cut corner in three sizes (the design size, 0.3 mm smaller and 0.3 mm larger), measure all of them, and fly the one closest to 2.425 GHz.** This section explains the problem that makes this necessary.
 
 Folder: [`3_three_sizes`](3_three_sizes) (the design size is in [`1_cut_corner_1.5mm`](1_cut_corner_1.5mm))
 
-### Why
+### The problem
 
-A patch antenna's frequency is set by the patch size and the board it sits on, and a factory cannot make either exactly as drawn. The expected errors are:
+A patch antenna's frequency is set by the patch size and the board it sits on, and a factory cannot make either exactly as drawn. For JLCPCB's PTFE (ZYF255DA, 1.524 mm) the expected errors are:
 
 | What varies | By how much | Frequency shift |
 | --- | --- | --- |
 | Dk of the PTFE | 2.55 ± 0.04 (laminate datasheet) | about ±18 MHz |
-| Board thickness | ±10 % (JLCPCB) | about ±9 MHz |
+| Board thickness | ±10 % (JLCPCB) | about ±9 MHz (+10 thin, −7.5 thick) |
 | Etched patch size | about ±0.05 mm | about ±3 MHz |
+| **All together** | | **about ±20 to ±23 MHz** |
 
-Together that is roughly ±20 MHz, which is as wide as the channel. The Dk figure comes from HFSS runs of this board with Dk set to 2.52 and 2.58, and the patch-size figure from the three sizes below. The thickness figure is from a separate check in a second solver.
+The total is the root-sum-square of the three, since they are independent. That is as wide as the 20 MHz channel itself. The Dk figure comes from HFSS runs of this board with Dk set to 2.52 and 2.58, and the patch-size figure from the three sizes below. The thickness figure is from a separate check in a second solver (openEMS) at 1.37 and 1.68 mm.
 
-### What changed
+Sources: [ZYF255DA datasheet (hosted by JLCPCB)](https://rs.jlcpcb.com/static/file/ptfe-teflon-datasheet.pdf), [JLCPCB PCB capabilities](https://jlcpcb.com/capabilities/pcb-capabilities).
+
+### What an off-frequency board does
+
+The table reads the design-size HFSS curves as if the whole antenna had moved up or down in frequency, and reports the worst point inside the 2.415 to 2.435 GHz channel.
+
+| Board lands | Worst axial ratio | Lowest RHCP gain | Worst return loss | Meets gain 6.5 and return loss 10? |
+| --- | --- | --- | --- | --- |
+| On target | 4.1 dB | 7.08 dBic | 15.5 dB | yes |
+| 10 MHz high | 7.0 dB | 6.47 dBic | 12.3 dB | gain just under |
+| 10 MHz low | 7.6 dB | 6.72 dBic | 15.5 dB | yes |
+| 20 MHz high | 10.4 dB | 5.49 dBic | 8.2 dB | no |
+| 20 MHz low | 10.9 dB | 6.17 dBic | 16.6 dB | gain no |
+
+The gain column is realized gain, so it already includes the polarization and mismatch losses. Polarization degrades first: the cut corner keeps its axial ratio under 3 dB over only 16 MHz. The 20 MHz rows use the end of the HFSS sweep (2.395 GHz), so they are approximate.
+
+### Temperature
+
+The Dk of the PTFE changes by −115 ppm/°C (datasheet). Over −40 to +85 °C that moves the antenna by about ±9 MHz around its room-temperature frequency. This is a hand estimate, not simulated. It affects every board the same way, so choosing a size cannot remove it.
+
+### Options considered
+
+| Option | Frequency error | Notes |
+| --- | --- | --- |
+| **JLCPCB PTFE, three sizes** (proposed) | about ±20 MHz, covered by the three sizes | $175 per size (5 boards), about $525 for all three. Designed and simulated. |
+| JLCPCB PTFE, one size | about ±20 MHz | A board 20 MHz off misses the gain requirement (table above). |
+| Rogers RO4350B or RO4003C | about ±17 MHz | Dk 3.48 / 3.38 ± 0.05. Tolerance barely better, and RO4350B simulated at 5.6 to 6.3 dBic, below the 6.5 requirement. |
+| Rogers RT/duroid 5880 (or Taconic TLY-5) | about ±12 MHz (estimate) | Dk 2.20 ± 0.02, 1.575 mm ± 0.076 mm. Roughly halves the error. Not designed or simulated yet (patch about 40 mm). Not offered by JLCPCB. PCBWay lists it, but only as a manual quote for non-stocked material. |
+
+Sources: [RT/duroid 5880 datasheet (Rogers)](https://www.rogerscorp.com/-/media/project/rogerscorp/documents/advanced-electronics-solutions/english/data-sheets/rt-duroid-5870---5880-data-sheet.pdf), [PCBWay material list](https://www.pcbway.com/pcb_prototype/PCB_material_classification.html).
+
+### What changed between the three sizes
 
 Only the side of the patch. The corner cuts, the feed position, the board and everything else are identical. A smaller patch resonates higher and a larger one lower.
 
@@ -213,6 +245,8 @@ So the three are about 19 MHz apart, or about 62 MHz per millimetre of patch sid
 ### How they are used
 
 All three are made in the same batch, so they share the same material and thickness errors. Each is measured on a network analyzer, and the one that lands closest to 2.425 GHz is the one that flies. If the factory makes everything about 20 MHz low, that is the smaller one; if about 20 MHz high, the larger one.
+
+Because the sizes are 19 MHz apart, the best of the three should land within about ±10 MHz of 2.425 GHz for any factory error up to about ±30 MHz. From the table above, a board 10 MHz off still gives about 6.5 to 6.7 dBic. A spare from the same batch is the backup for the flight board.
 
 ### Files
 
@@ -304,7 +338,7 @@ Suggested checks:
 ## 8. What has not been verified
 
 - **Nothing has been built or measured.** A network analyzer measurement of the first boards is the real test.
-- **Power handling (3 W) and temperature (−40 to +85 °C)** have not been simulated or tested.
+- **Power handling (3 W) and temperature (−40 to +85 °C)** have not been simulated or tested. Section 5 has a hand estimate of the temperature shift.
 - **The real mounting.** Every result assumes a clean 100 mm metal face behind the board, with nothing else near the patch.
 - **The SMA connector** is not in these models. In a separate run it moved the 1.5 mm cut corner about 3 MHz lower.
 - **The coupler** for the dual feed is assumed, not modelled.
